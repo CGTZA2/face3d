@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import shutil
+import trimesh
 from scipy.spatial import Delaunay
 from data_manager import ImageManager
 from landmark_utils import LandmarkDetector
@@ -87,6 +88,16 @@ def save_textured_obj(output_dir, subject_id, landmarks_3d, landmarks_2d, img_sh
             f.write(f"f {p1+1}/{p1+1} {p2+1}/{p2+1} {p3+1}/{p3+1}\n")
 
     print(f"Saved textured model to: {obj_path}")
+    
+    # 4. Convert to GLB (GLTF Binary) for easier web use
+    glb_path = os.path.join(output_dir, f"{subject_id}.glb")
+    try:
+        # Load the OBJ we just created (trimesh handles the texture via the MTL)
+        mesh = trimesh.load(obj_path, process=False)
+        mesh.export(glb_path)
+        print(f"Saved GLB model to: {glb_path}")
+    except Exception as e:
+        print(f"Failed to create GLB: {e}")
 
 def generate_face_model(subject, detector, output_dir="output"):
     """

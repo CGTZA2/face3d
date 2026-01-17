@@ -1,0 +1,9 @@
+numpy<2.3.0
+opencv-python
+matplotlib
+mediapipe==0.10.14
+scipy
+trimesh
+h5py
+scikit-image
+eos-py

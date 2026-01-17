@@ -1,0 +1,77 @@
+name: C++ build
+
+on:
+  push:
+    branches: [ "master", "devel" ]
+  pull_request:
+    branches: [ "master", "devel" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, windows-2019, ubuntu-24.04, ubuntu-latest, ubuntu-20.04, macos-latest, macos-13]
+
+    name: ${{matrix.os}}
+
+    runs-on: ${{matrix.os}}
+
+    env:
+      # Set cache_path to the vcpkg default Windows directory if the OS is Windows, otherwise set it to the default Linux / macOS directory:
+      cache_path: ${{ startsWith(matrix.os, 'windows') && 'C:/Users/runneradmin/AppData/Local/vcpkg/archives/' || '~/.cache/vcpkg/archives/' }}
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        submodules: true
+
+    - name: Install vcpkg on macOS if not pre-installed
+      if: runner.os == 'macOS' && (matrix.os == 'macos-13' || matrix.os == 'macos-latest')
+      run: |
+        git clone https://github.com/microsoft/vcpkg.git
+        ./vcpkg/bootstrap-vcpkg.sh
+      shell: bash
+
+    - name: Set VCPKG_ROOT environment variable
+      shell: bash
+      run: |
+        if [[ "$RUNNER_OS" == "macOS" ]]; then
+          echo "VCPKG_ROOT=$GITHUB_WORKSPACE/vcpkg" >> $GITHUB_ENV
+        else
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+        fi
+
+    - name: Cache/restore vcpkg dependencies
+      uses: actions/cache@v3
+      with:
+        path: ${{env.cache_path}}
+        key: ${{matrix.os}}-vcpkg-cache-${{ hashFiles('vcpkg.json', '.github/workflows/cmake.yml') }}
+        restore-keys: |
+          ${{matrix.os}}-vcpkg-cache-
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: >
+        cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        -DCMAKE_TOOLCHAIN_FILE=${{env.VCPKG_ROOT}}/scripts/buildsystems/vcpkg.cmake
+        -DVCPKG_MANIFEST_FEATURES="ceres"
+        -DEOS_BUILD_CERES_EXAMPLE=ON -DEOS_BUILD_UTILS=ON -DEOS_GENERATE_PYTHON_BINDINGS=ON
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest -C ${{env.BUILD_TYPE}}

@@ -3,3 +3,4 @@ opencv-python
 matplotlib
 mediapipe==0.10.14
 scipy
+trimesh

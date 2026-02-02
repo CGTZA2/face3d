@@ -140,7 +140,7 @@ class BaseOptions():
         opt.world_size = len(gpu_ids)
         # if len(opt.gpu_ids) > 0:
         #     torch.cuda.set_device(gpu_ids[0])
-        if opt.world_size == 1:
+        if opt.world_size == 1 or opt.gpu_ids == '-1':
             opt.use_ddp = False
 
         if opt.phase != 'test':

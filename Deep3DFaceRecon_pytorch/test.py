@@ -16,8 +16,12 @@ from scipy.io import loadmat, savemat
 
 def get_data_path(root='examples'):
     
-    im_path = [os.path.join(root, i) for i in sorted(os.listdir(root)) if i.endswith('png') or i.endswith('jpg')]
-    lm_path = [i.replace('png', 'txt').replace('jpg', 'txt') for i in im_path]
+    im_path = []
+    for i in sorted(os.listdir(root)):
+        _, ext = os.path.splitext(i)
+        if ext.lower() in {'.png', '.jpg', '.jpeg'}:
+            im_path.append(os.path.join(root, i))
+    lm_path = [os.path.splitext(i)[0] + '.txt' for i in im_path]
     lm_path = [os.path.join(i.replace(i.split(os.path.sep)[-1],''),'detections',i.split(os.path.sep)[-1]) for i in lm_path]
 
     return im_path, lm_path
@@ -36,8 +40,12 @@ def read_data(im_path, lm_path, lm3d_std, to_tensor=True):
     return im, lm
 
 def main(rank, opt, name='examples'):
-    device = torch.device(rank)
-    torch.cuda.set_device(device)
+    if opt.gpu_ids == '-1':
+        device = torch.device('cpu')
+        opt.use_ddp = False
+    else:
+        device = torch.device(rank)
+        torch.cuda.set_device(device)
     model = create_model(opt)
     model.setup(opt)
     model.device = device

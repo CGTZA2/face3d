@@ -8,7 +8,12 @@ import kornia
 from kornia.geometry.camera import pixel2cam
 import numpy as np
 from typing import List
-import nvdiffrast.torch as dr
+try:
+    import nvdiffrast.torch as dr
+    _HAS_NVDIFFRAST = True
+except Exception:
+    dr = None
+    _HAS_NVDIFFRAST = False
 from scipy.io import loadmat
 from torch import nn
 
@@ -46,6 +51,11 @@ class MeshRenderer(nn.Module):
             tri             -- torch.tensor, size (B, M, 3) or (M, 3), triangles
             feat(optional)  -- torch.tensor, size (B, C), features
         """
+        if not _HAS_NVDIFFRAST:
+            raise RuntimeError(
+                "nvdiffrast is not available. "
+                "Install nvdiffrast with CUDA, or disable rendering."
+            )
         device = vertex.device
         rsize = int(self.rasterize_size)
         ndc_proj = self.ndc_proj.to(device)

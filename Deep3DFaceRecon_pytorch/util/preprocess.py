@@ -142,12 +142,14 @@ def align_for_lm(img, five_points):
 
 # resize and crop images for face reconstruction
 def resize_n_crop_img(img, lm, t, s, target_size=224., mask=None):
+    t = np.array(t).reshape(-1)
+    s = float(np.array(s).reshape(-1)[0])
     w0, h0 = img.size
-    w = (w0*s).astype(np.int32)
-    h = (h0*s).astype(np.int32)
-    left = (w/2 - target_size/2 + float((t[0] - w0/2)*s)).astype(np.int32)
+    w = int(w0 * s)
+    h = int(h0 * s)
+    left = int(w/2 - target_size/2 + (float(t[0]) - w0/2) * s)
     right = left + target_size
-    up = (h/2 - target_size/2 + float((h0/2 - t[1])*s)).astype(np.int32)
+    up = int(h/2 - target_size/2 + (h0/2 - float(t[1])) * s)
     below = up + target_size
 
     img = img.resize((w, h), resample=RESAMPLING_METHOD)
@@ -196,11 +198,13 @@ def align_img(img, lm, lm3D, mask=None, target_size=224., rescale_factor=102.):
 
     # calculate translation and scale factors using 5 facial landmarks and standard landmarks of a 3D face
     t, s = POS(lm5p.transpose(), lm3D.transpose())
+    t = np.array(t).reshape(-1)
+    s = float(np.array(s).reshape(-1)[0])
     s = rescale_factor/s
 
     # processing the image
     img_new, lm_new, mask_new = resize_n_crop_img(img, lm, t, s, target_size=target_size, mask=mask)
-    trans_params = np.array([w0, h0, s, t[0], t[1]])
+    trans_params = np.array([w0, h0, s, float(t[0]), float(t[1])])
 
     return trans_params, img_new, lm_new, mask_new
 
